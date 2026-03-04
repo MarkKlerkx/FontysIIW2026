@@ -3,130 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure HumanConnect | Integrated Command</title>
+    <title>Azure HumanConnect | Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .page-content { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .glow-blue { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .glow-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
         .status-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .nav-link { @apply px-3 py-2 cursor-pointer hover:text-blue-400 transition text-sm font-medium; }
         .active-tab { @apply border-b-2 border-blue-500 text-blue-400; }
+        #onboarding-overlay { backdrop-filter: blur(8px); }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen font-sans">
+<body class="bg-slate-900 text-white min-h-screen font-sans overflow-x-hidden">
 
-    <nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center p-4">
-            <div class="flex items-center gap-4">
-                <div class="bg-blue-600 p-2 rounded-lg font-bold text-xl text-white">HC</div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Azure <span class="text-blue-400">HumanConnect</span></h1>
-                    <p id="operator-display" class="text-[10px] text-slate-400 uppercase tracking-widest">Operator: Not Logged In</p>
-                </div>
+    <div id="onboarding-overlay" class="fixed inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-blue-500/50 p-8 rounded-3xl max-w-md w-full shadow-2xl glow-blue">
+            <div class="text-center mb-8">
+                <div class="inline-block bg-blue-600 p-3 rounded-2xl font-bold text-2xl mb-4">HC</div>
+                <h2 class="text-2xl font-bold">Initialize System</h2>
+                <p class="text-slate-400 text-sm">Connect your human operator profile to Azure.</p>
             </div>
-            <div class="flex space-x-2 md:space-x-4">
-                <span onclick="showPage('dashboard')" id="nav-dashboard" class="nav-link active-tab">Dashboard</span>
-                <span onclick="showPage('fleet')" id="nav-fleet" class="nav-link">Hubs</span>
-                <span onclick="showPage('human')" id="nav-human" class="nav-link">Health</span>
-                <span onclick="showPage('settings')" id="nav-settings" class="nav-link">Settings</span>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Operator Name</label>
+                    <input type="text" id="init-name" placeholder="Enter your full name..." 
+                           class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl mt-1 focus:border-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Primary Logistics Hub</label>
+                    <input type="text" id="init-city" placeholder="e.g. Eindhoven or Helsinki..." 
+                           class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl mt-1 focus:border-blue-500 outline-none transition">
+                </div>
+                <button onclick="startSystem()" class="w-full bg-blue-600 py-4 rounded-xl font-bold text-lg hover:bg-blue-500 transition-all shadow-lg flex items-center justify-center gap-2">
+                    Establish Connection
+                </button>
             </div>
         </div>
-    </nav>
+    </div>
 
-    <div class="container mx-auto p-4 md:p-6">
-        
-        <div id="page-dashboard" class="page-content">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 glow-blue">
-                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                            <span class="w-2 h-2 bg-green-500 rounded-full status-pulse"></span>
-                            Live System Overview
-                        </h2>
-                        <div id="dashboard-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                            </div>
-                    </div>
-
-                    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-                        <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase">Fleet Biometrics Correlation</h3>
-                        <canvas id="mainChart" height="120"></canvas>
+    <div id="main-app" class="opacity-20 pointer-events-none transition-all duration-1000">
+        <nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+            <div class="container mx-auto flex justify-between items-center p-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-600 px-2 py-1 rounded font-bold text-lg">HC</div>
+                    <div>
+                        <h1 class="font-bold text-base leading-tight">Azure <span class="text-blue-400">HumanConnect</span></h1>
+                        <p id="operator-display" class="text-[9px] text-slate-400 uppercase tracking-widest">Operator: Pending</p>
                     </div>
                 </div>
+                <div class="flex space-x-1 md:space-x-4">
+                    <span onclick="showPage('dashboard')" id="nav-dashboard" class="nav-link active-tab">Dashboard</span>
+                    <span onclick="showPage('fleet')" id="nav-fleet" class="nav-link">Hubs</span>
+                    <span onclick="showPage('human')" id="nav-human" class="nav-link">Health</span>
+                </div>
+            </div>
+        </nav>
 
-                <div class="space-y-6">
-                    <div class="bg-blue-900/20 border border-blue-500/30 p-6 rounded-2xl">
-                        <h3 class="font-bold text-blue-400 mb-2">Operator Instructions</h3>
-                        <p id="dynamic-instruction" class="text-sm text-slate-300 italic">"Please configure your operator profile to begin."</p>
+        <div class="container mx-auto p-4 md:p-6">
+            <div id="page-dashboard" class="page-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 glow-blue">
+                            <h2 class="text-xl font-bold mb-6 flex items-center gap-3">
+                                <span class="w-2 h-2 bg-green-500 rounded-full status-pulse"></span>
+                                Live Command Overview
+                            </h2>
+                            <div id="dashboard-summary" class="grid grid-cols-3 gap-4 text-center"></div>
+                        </div>
+                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                            <h3 class="text-[10px] font-bold text-slate-500 mb-6 uppercase tracking-widest">Real-time Biometric Correlation</h3>
+                            <canvas id="mainChart" height="130"></canvas>
+                        </div>
                     </div>
 
-                    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-64 overflow-y-auto">
-                        <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase">Activity Log</h3>
-                        <div id="activity-log" class="space-y-3 text-[11px] font-mono">
-                            <div class="text-blue-400">[SYSTEM] Connection established with West Europe datacenter.</div>
+                    <div class="space-y-6">
+                        <div class="bg-blue-900/20 border border-blue-500/30 p-6 rounded-2xl">
+                            <h3 id="instr-title" class="font-bold text-blue-400 mb-2">System Initializing...</h3>
+                            <p id="dynamic-instruction" class="text-sm text-slate-300 italic leading-relaxed"></p>
+                        </div>
+                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-64 flex flex-col">
+                            <h3 class="text-[10px] font-bold text-slate-500 mb-4 uppercase tracking-widest">Activity Log</h3>
+                            <div id="activity-log" class="space-y-2 text-[10px] font-mono overflow-y-auto flex-1 pr-2"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div id="page-fleet" class="page-content hidden">
-            <div class="flex flex-col md:flex-row justify-between mb-8 gap-4">
-                <h2 class="text-3xl font-bold">Hub Management</h2>
-                <div class="flex gap-2">
-                    <input type="text" id="city-input" placeholder="Add city..." class="bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-sm">
-                    <button onclick="searchCity()" class="bg-blue-600 px-4 py-2 rounded-lg text-sm font-bold">Add</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="weather-cards"></div>
-        </div>
-
-        <div id="page-human" class="page-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Biometric Telemetry</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
-                <div class="bg-slate-800 p-10 rounded-2xl border border-slate-700">
-                    <div class="text-slate-400 uppercase text-xs font-bold mb-2">Current Stress Index</div>
-                    <div id="stress-display" class="text-7xl font-mono text-blue-500">--%</div>
-                    <div id="stress-advice" class="mt-4 text-sm italic">Initializing sensors...</div>
-                </div>
-                <div class="bg-slate-800 p-10 rounded-2xl border border-slate-700">
-                    <div class="text-slate-400 uppercase text-xs font-bold mb-2">Heart Rate</div>
-                    <div id="bpm-display" class="text-7xl font-mono text-white">--</div>
-                    <div class="text-blue-400 text-xs mt-4">REAL-TIME CLOUD STREAM</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="page-settings" class="page-content hidden">
-            <div class="max-w-md mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 mt-10">
-                <h2 class="text-2xl mb-6 font-bold text-blue-400 text-center">Operator Profile</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 uppercase">Your Name</label>
-                        <input type="text" id="op-name" placeholder="Mark" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg mt-1 outline-none focus:border-blue-500">
+            <div id="page-fleet" class="page-content hidden">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold tracking-tight">Logistics Hubs</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="city-input" placeholder="Add city..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                        <button onclick="searchCity()" class="bg-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-500">Add</button>
                     </div>
-                    <button onclick="saveSettings()" class="w-full bg-blue-600 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-500 transition-all">Connect to Fleet</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="weather-cards"></div>
+            </div>
+
+            <div id="page-human" class="page-content hidden">
+                <h2 class="text-2xl font-bold mb-6">Human Telemetry</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-800 p-10 rounded-2xl border border-slate-700 text-center">
+                        <div class="text-slate-500 uppercase text-[10px] font-bold mb-2 tracking-widest">Stress Index</div>
+                        <div id="stress-display" class="text-7xl font-mono text-blue-500">--%</div>
+                        <div id="stress-advice" class="mt-4 text-xs italic text-slate-400">Waiting for data...</div>
+                    </div>
+                    <div class="bg-slate-800 p-10 rounded-2xl border border-slate-700 text-center">
+                        <div class="text-slate-500 uppercase text-[10px] font-bold mb-2 tracking-widest">Heart Rate (BPM)</div>
+                        <div id="bpm-display" class="text-7xl font-mono text-white">--</div>
+                        <div class="text-blue-500 text-[10px] mt-4 font-bold tracking-widest">SECURE CLOUD STREAM</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // GLOBAL APP STATE
         let appState = {
-            operatorName: "Guest",
-            hubs: [
-                { name: 'Eindhoven', lat: 51.44, lon: 5.47, temp: 0 },
-                { name: 'Madrid', lat: 40.41, lon: -3.70, temp: 0 }
-            ],
+            operatorName: "",
+            hubs: [],
             currentBPM: 72,
             stressLevel: 45
         };
 
-        // UI NAVIGATION
+        // ONBOARDING LOGIC
+        async function startSystem() {
+            const name = document.getElementById('init-name').value;
+            const city = document.getElementById('init-city').value;
+
+            if (!name || !city) {
+                alert("Please provide both your name and a starting hub.");
+                return;
+            }
+
+            appState.operatorName = name;
+            
+            // Zoek de eerste stad op
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`);
+                const data = await res.json();
+                if(data.results) {
+                    const r = data.results[0];
+                    appState.hubs.push({ name: r.name, lat: r.latitude, lon: r.longitude, temp: 0 });
+                } else {
+                    appState.hubs.push({ name: city, lat: 51.44, lon: 5.47, temp: 0 }); // Fallback Eindhoven
+                }
+            } catch(e) {
+                appState.hubs.push({ name: 'Default Hub', lat: 51.44, lon: 5.47, temp: 0 });
+            }
+
+            // UI Unlocking
+            document.getElementById('onboarding-overlay').style.display = 'none';
+            document.getElementById('main-app').classList.remove('opacity-20', 'pointer-events-none');
+            document.getElementById('operator-display').innerText = `Operator: ${name}`;
+            
+            logActivity(`System initialized by ${name}`, "text-green-400");
+            logActivity(`Secure connection to hub ${appState.hubs[0].name} established.`);
+            
+            await fetchWeather();
+            updateSimulation();
+            showPage('dashboard');
+        }
+
         function showPage(pageId) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active-tab'));
@@ -134,59 +176,36 @@
             document.getElementById('nav-' + pageId).classList.add('active-tab');
         }
 
-        function logActivity(msg, color="text-slate-400") {
+        function logActivity(msg, color="text-slate-500") {
             const log = document.getElementById('activity-log');
-            const time = new Date().toLocaleTimeString();
-            log.innerHTML = `<div class="${color}">[${time}] ${msg}</div>` + log.innerHTML;
-        }
-
-        // SAVE OPERATOR
-        function saveSettings() {
-            const name = document.getElementById('op-name').value;
-            if(!name) return;
-            appState.operatorName = name;
-            document.getElementById('operator-display').innerText = `Operator: ${name}`;
-            logActivity(`Profile updated: Welcome, ${name}`, "text-green-400");
-            updateInstruction();
-            showPage('dashboard');
-        }
-
-        function updateInstruction() {
-            const instr = document.getElementById('dynamic-instruction');
-            const extremeHub = appState.hubs.find(h => h.temp > 25 || h.temp < 5);
-            
-            if (extremeHub) {
-                instr.innerText = `"${appState.operatorName}, conditions in ${extremeHub.name} are impacting fleet health. Monitor biometric data closely."`;
-            } else {
-                instr.innerText = `"All systems nominal, ${appState.operatorName}. Logistics hubs are operating within human-safe parameters."`;
-            }
-        }
-
-        // SEARCH & WEATHER
-        async function searchCity() {
-            const city = document.getElementById('city-input').value;
-            try {
-                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`);
-                const data = await res.json();
-                if(data.results) {
-                    const r = data.results[0];
-                    appState.hubs.unshift({ name: r.name, lat: r.latitude, lon: r.longitude, temp: 0 });
-                    if(appState.hubs.length > 4) appState.hubs.pop();
-                    logActivity(`New hub added: ${r.name}`, "text-blue-400");
-                    fetchWeather();
-                }
-            } catch(e) { logActivity("Search failed", "text-red-400"); }
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            log.innerHTML = `<div class="mb-1"><span class="text-slate-600">[${time}]</span> <span class="${color}">${msg}</span></div>` + log.innerHTML;
         }
 
         async function fetchWeather() {
             for (let hub of appState.hubs) {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hub.lat}&longitude=${hub.lon}&current_weather=true`);
-                const data = await res.json();
-                hub.temp = Math.round(data.current_weather.temperature);
+                try {
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hub.lat}&longitude=${hub.lon}&current_weather=true`);
+                    const data = await res.json();
+                    hub.temp = Math.round(data.current_weather.temperature);
+                } catch(e) {}
             }
             updateHubCards();
             updateDashboardSummary();
             updateInstruction();
+        }
+
+        function updateInstruction() {
+            const title = document.getElementById('instr-title');
+            const text = document.getElementById('dynamic-instruction');
+            const extremeHub = appState.hubs.find(h => h.temp > 28 || h.temp < 5);
+            
+            title.innerText = `Protocol for ${appState.operatorName.split(' ')[0]}`;
+            if (extremeHub) {
+                text.innerText = `Alert: Extreme conditions in ${extremeHub.name} (${extremeHub.temp}°C). Sensor data indicates potential human fatigue. Keep communication lines open.`;
+            } else {
+                text.innerText = `All hubs reporting stable. Ensure driver well-being by monitoring biometrics every 15 minutes. Great job, ${appState.operatorName.split(' ')[0]}.`;
+            }
         }
 
         function updateHubCards() {
@@ -194,62 +213,72 @@
             if(!container) return;
             container.innerHTML = appState.hubs.map(hub => `
                 <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-                    <h4 class="font-bold text-slate-400 mb-2">${hub.name}</h4>
-                    <div class="text-4xl font-mono">${hub.temp}°C</div>
+                    <div class="flex justify-between items-center mb-2 text-slate-500 font-bold text-[10px] uppercase">
+                        <span>${hub.name} Hub</span>
+                        <span class="text-blue-500">Active</span>
+                    </div>
+                    <div class="text-5xl font-mono">${hub.temp}°C</div>
                 </div>
             `).join('');
         }
 
         function updateDashboardSummary() {
             const container = document.getElementById('dashboard-summary');
+            if(appState.hubs.length === 0) return;
             const avgTemp = Math.round(appState.hubs.reduce((a,b) => a + b.temp, 0) / appState.hubs.length);
             container.innerHTML = `
-                <div><div class="text-xs text-slate-500 uppercase">Avg Fleet Temp</div><div class="text-2xl font-mono">${avgTemp}°C</div></div>
-                <div><div class="text-xs text-slate-500 uppercase">Active Hubs</div><div class="text-2xl font-mono">${appState.hubs.length}</div></div>
-                <div><div class="text-xs text-slate-500 uppercase">Cognitive Load</div><div class="text-2xl font-mono text-blue-400">${appState.stressLevel}%</div></div>
+                <div class="p-2">
+                    <div class="text-[9px] text-slate-500 uppercase font-bold">Avg Temp</div>
+                    <div class="text-xl font-mono">${avgTemp}°C</div>
+                </div>
+                <div class="p-2 border-x border-slate-700">
+                    <div class="text-[9px] text-slate-500 uppercase font-bold">Stress</div>
+                    <div class="text-xl font-mono text-blue-400">${appState.stressLevel}%</div>
+                </div>
+                <div class="p-2">
+                    <div class="text-[9px] text-slate-500 uppercase font-bold">BPM</div>
+                    <div class="text-xl font-mono">${appState.currentBPM}</div>
+                </div>
             `;
         }
 
-        // DATA CORRELATION LOGIC (The Heart of the Workshop)
         function updateSimulation() {
-            // Simuleer Hartslag
-            appState.currentBPM = Math.floor(70 + Math.random() * 15);
-            
-            // LOGICA: Stress level is afhankelijk van de temperatuur in de hubs
-            const maxTemp = Math.max(...appState.hubs.map(h => h.temp));
-            const baseStress = maxTemp > 25 ? 65 : 30; // Hitte = meer stress
-            appState.stressLevel = Math.floor(baseStress + Math.random() * 15);
+            appState.currentBPM = Math.floor(72 + Math.random() * 12);
+            const maxTemp = appState.hubs.length > 0 ? Math.max(...appState.hubs.map(h => h.temp)) : 20;
+            const baseStress = maxTemp > 28 ? 60 : 35;
+            appState.stressLevel = Math.floor(baseStress + Math.random() * 10);
 
-            // Update UI elementen
             if(document.getElementById('stress-display')) {
                 document.getElementById('stress-display').innerText = appState.stressLevel + "%";
                 document.getElementById('bpm-display').innerText = appState.currentBPM;
                 document.getElementById('stress-advice').innerText = appState.stressLevel > 60 
-                    ? "Warning: Mental fatigue detected. Initiate break sequence?" 
-                    : "Human performance stable.";
+                    ? "Attention: Consider dispatching automated relief." 
+                    : "No immediate intervention required.";
             }
-
             updateDashboardSummary();
             updateChart();
         }
 
-        // CHART CONFIG
         const ctx = document.getElementById('mainChart').getContext('2d');
         const mainChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [
-                { label: 'Stress %', data: [], borderColor: '#3b82f6', tension: 0.4 },
-                { label: 'BPM', data: [], borderColor: '#ffffff', tension: 0.4 }
+                { label: 'Stress Index', data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 0 },
+                { label: 'Heart Rate', data: [], borderColor: '#ffffff', tension: 0.4, pointRadius: 0 }
             ]},
             options: { 
-                scales: { y: { min: 20, max: 100, grid: { color: '#334155' } }, x: { grid: { display: false } } },
-                plugins: { legend: { labels: { color: '#94a3b8' } } }
+                animation: false,
+                scales: { 
+                    y: { min: 20, max: 100, grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 9 } } }, 
+                    x: { display: false } 
+                },
+                plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } }
             }
         });
 
         function updateChart() {
-            const time = new Date().toLocaleTimeString([], { second: '2-digit' });
-            if(mainChart.data.labels.length > 10) {
+            const time = new Date().toLocaleTimeString();
+            if(mainChart.data.labels.length > 15) {
                 mainChart.data.labels.shift();
                 mainChart.data.datasets[0].data.shift();
                 mainChart.data.datasets[1].data.shift();
@@ -260,9 +289,25 @@
             mainChart.update();
         }
 
-        setInterval(updateSimulation, 3000);
-        setInterval(fetchWeather, 30000); // Check weather every 30s
-        fetchWeather();
+        async function searchCity() {
+            const city = document.getElementById('city-input').value;
+            if(!city) return;
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`);
+                const data = await res.json();
+                if(data.results) {
+                    const r = data.results[0];
+                    appState.hubs.unshift({ name: r.name, lat: r.latitude, lon: r.longitude, temp: 0 });
+                    if(appState.hubs.length > 4) appState.hubs.pop();
+                    logActivity(`Hub added: ${r.name}`, "text-blue-400");
+                    fetchWeather();
+                    document.getElementById('city-input').value = '';
+                }
+            } catch(e) {}
+        }
+
+        setInterval(updateSimulation, 2500);
+        setInterval(fetchWeather, 60000);
     </script>
 </body>
 </html>
